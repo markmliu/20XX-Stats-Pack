@@ -20,7 +20,7 @@ def compare_with_previous(img1, img2, locations_found):
         percent_1 = img1[location[1]:location[1] + HEIGHT, location[0]:location[0] + WIDTH]
         percent_2 = img2[location[1]:location[1] + HEIGHT, location[0]:location[0] + WIDTH]
         diff = cv2.matchTemplate(percent_1, percent_2, eval(DIFF_METHOD))[0][0]
-        print "diff: " + str(diff)
+        # print "diff: " + str(diff)
         if diff < diff_threshold:
             return False
     return True
@@ -28,9 +28,15 @@ def compare_with_previous(img1, img2, locations_found):
 def match_to_number(candidate, number_templates):
     # try to match candidate to each image in number_templates
     prev_diff = float("-inf")
+    max_idx = -1
+    max_diff = prev_diff
     for index, number in enumerate(number_templates):
+        #cv2.imshow('compare1', candidate)
+        #cv2.imshow('compare2', number)
         cur_diff = cv2.matchTemplate(candidate, number, eval(DIFF_METHOD))
-        if cur_diff > prev_diff:
+        #print "cur_diff: " + str(cur_diff)
+        #cv2.waitKey(0)
+        if cur_diff > max_diff:
             max_diff = cur_diff
             max_idx = index
     # if there's something reasonably close, return that...
@@ -68,6 +74,7 @@ def main():
     cv2.waitKey(0)
 
     _, previous_frame = cap.read()
+    prev_stability = False
     while(cap.isOpened()):
         ret ,frame = cap.read()
         if ret == True:
@@ -81,10 +88,13 @@ def main():
                 cur_stability = True
             # if we've stabilized, check both percentages to see whats changed
             if cur_stability and not prev_stability:
-                for idx, location in locations_found:
+                for idx, location in enumerate(locations_found):
                     candidate = frame[location[1]:location[1] + HEIGHT, location[0]:location[0] + WIDTH]
+                    cv2.imshow('candidate', candidate)
+                    cv2.waitKey(0)
                     best_guess = match_to_number(candidate, number_templates)
-                    
+                    print "location: " + str(idx)
+                    print "guessed percent: " + str(best_guess)
                     
             if cv2.waitKey(25) & 0xFF == ord('q'):
                 break   

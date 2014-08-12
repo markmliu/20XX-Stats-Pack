@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import cv2
+import sys
+
 # hardcoded size of zero template...
 WIDTH = 25
 HEIGHT = 28
@@ -89,14 +91,18 @@ def clean_up_data(percent_series):
             prev_valid_point = point
     return cleaned_data
 
-def main():
+def main(argv = sys.argv):
+
+    file_name = sys.argv[1]
+    frames_to_start = int(sys.argv[2])
+    # is 1400, for falconDitto, 150 for mangoFalco
     # if threshold greater than this, its a match
     # maybe should just take top two instead..
     threshold = 0.95
-
-    cap = cv2.VideoCapture('falconDitto.mp4')
+    
+    cap = cv2.VideoCapture(file_name)
     # hardcode to find start of match now...should be able to find this programmatically
-    for i in range(1, 1400):
+    for i in range(1, frames_to_start):
         cap.read()    
     ret, frame = cap.read()
 
@@ -105,7 +111,7 @@ def main():
     number_templates = load_resources()
     zero = number_templates[0]
     diff = cv2.matchTemplate(frame, zero, eval(DIFF_METHOD))
-    # cv2.imshow('diff', diff)
+    cv2.imshow('diff', diff)
     # locations_found is the places where we think the zeros are
     # its an list of x,y pairs
     locations_found_unzipped = np.where(diff > threshold)
@@ -129,7 +135,7 @@ def main():
         ret ,frame = cap.read()
         frames_elapsed += 1
         if ret == True:
-            # cv2.imshow('frame', frame)
+            cv2.imshow('frame', frame)
             if not compare_with_previous(previous_frame, frame, locations_found):
                 # percentage will shake around, making it unstable
                 # wait until stable again to look for difference between it and previous one
@@ -141,8 +147,8 @@ def main():
                 best_guesses = []
                 for idx, location in enumerate(extended_locations_found):
                     candidate = frame[location[1]:location[1] + HEIGHT + (2 * BUFFER_SIZE), location[0]:location[0] + WIDTH + (2 * BUFFER_SIZE)]
-                    # cv2.imshow('candidate', candidate)
-                    # cv2.waitKey(0)
+                    cv2.imshow('candidate', candidate)
+                    cv2.waitKey(0)
                     best_guess = match_to_number(candidate, number_templates)
                     # print "location: " + str(idx)
                     # print "guessed percent: " + str(best_guess)
@@ -168,6 +174,11 @@ def main():
     # plt.plot(time_series, percent_series_1, 'bo')
     plt.plot(time_series, cleaned_2, 'r-')
     # plt.plot(time_series, percent_series_2, 'ro')
+    f = open('data.csv','w')
+    for idx, time_stamp in enumerate(time_series):
+        f.write(str(time_stamp) + ', ' + str(cleaned_1[idx]) + ', ' + str(cleaned_2[idx]) + '\n')
+    f.close()
+               
     plt.show()
     cv2.destroyAllWindows()
     cap.release()

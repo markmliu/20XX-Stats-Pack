@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import numpy as np
 import cv2
 import sys
@@ -8,7 +7,7 @@ WIDTH = 35
 HEIGHT = 39
 DIFF_METHOD = 'cv2.TM_CCOEFF_NORMED'
 # include a buffer for candidate size, augment each side by 5 pixels to account for shakiness
-BUFFER_SIZE = 10
+BUFFER_SIZE = 5
 
 def load_resources():
     # grab resources and put them into number_templates
@@ -121,21 +120,6 @@ def calculate_total_percent(ones, tens, hundreds):
         total += tens * 10
     return total
 
-def clean_up_data(percent_series):
-    # clean up the percentage series.  probably shouldn't believe a jump of more than 30, or a drop in percentage (unless the drop is to 0)
-    # if either of these occurs, just keep the previous data
-    cleaned_data = []
-    prev_valid_point = -1
-    for point in percent_series:
-        if point > prev_valid_point + 30:
-            cleaned_data.append(prev_valid_point)
-        elif point < prev_valid_point and point != 0:
-            cleaned_data.append(prev_valid_point)
-        else:
-            cleaned_data.append(point)
-            prev_valid_point = point
-    return cleaned_data
-
 def main(argv = sys.argv):
 
     file_name = sys.argv[1]
@@ -190,10 +174,10 @@ def main(argv = sys.argv):
                 percent_1 = calculate_total_percent(best_guesses[0], best_guesses[1], best_guesses[2])
                 percent_2 = calculate_total_percent(best_guesses[3], best_guesses[4], best_guesses[5])
                 time_elapsed = float(frames_elapsed)/60
-                print "Location 1: " + str(percent_1) + " Location 2: " + str(percent_2) + " at time " + str(time_elapsed)
+                print "Location 1: " + str(percent_1) + " Location 2: " + str(percent_2) + " at frame " + str(frames_elapsed)
                 percent_series_1.append(percent_1)
                 percent_series_2.append(percent_2)
-                time_series.append(time_elapsed)
+                time_series.append(frames_elapsed)
                 #cv2.waitKey(0)
             if cv2.waitKey(25) & 0xFF == ord('q'):
                 break   
@@ -201,19 +185,11 @@ def main(argv = sys.argv):
         else:
             break
         previous_frame = frame
-    # loops has ended, clean up the data now?
-    cleaned_1 = clean_up_data(percent_series_1)
-    cleaned_2 = clean_up_data(percent_series_2)
-    plt.plot(time_series, cleaned_1, 'b-')
-    # plt.plot(time_series, percent_series_1, 'bo')
-    plt.plot(time_series, cleaned_2, 'r-')
-    # plt.plot(time_series, percent_series_2, 'ro')
-    f = open('data.csv','w')
+    f = open(file_name + '_data.csv','w')
     for idx, time_stamp in enumerate(time_series):
-        f.write(str(time_stamp) + ', ' + str(cleaned_1[idx]) + ', ' + str(cleaned_2[idx]) + '\n')
+        f.write(str(time_stamp) + ', ' + str(percent_series_1[idx]) + ', ' + str(percent_series_2[idx]) + '\n')
     f.close()
                
-    plt.show()
     cv2.destroyAllWindows()
     cap.release()
 

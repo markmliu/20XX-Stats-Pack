@@ -4,6 +4,11 @@
 import numpy as np
 import cv2
 
+def grab_and_resize(frame):
+    ret = frame[305:333, 150:175]
+    ret = cv2.resize(ret, (35,39))
+    return ret
+
 cap = cv2.VideoCapture('falconDitto.mp4')
 
 # take first frame of the video
@@ -13,89 +18,89 @@ for i in range(1, 1400):
     cap.read()
 # hardcode to find start of match now...should be able to find this programmatically
 ret, frame = cap.read()
-zero = frame[305:333, 150:175]
-cv2.imshow('zero', zero)
+zero = grab_and_resize(frame)
+cv2.imshow('zero_', zero)
 cv2.waitKey(0)
 # confirm that zero looks correct
-cv2.imwrite('smash_resources/0.png', zero)
+cv2.imwrite('smash_resources_v2/0.png', zero)
 
 for i in range(1, 100):
     cap.read()
 
 ret, frame = cap.read()
-seven = frame[305:333, 150:175]
+seven = grab_and_resize(frame)
 cv2.imshow('seven', seven)
 cv2.waitKey(0)
-cv2.imwrite('smash_resources/7.png', seven)
+cv2.imwrite('smash_resources_v2/7.png', seven)
 
 for i in range(1, 550):
     cap.read()
 
 ret, frame = cap.read()
-two = frame[305:333, 150:175]
+two = grab_and_resize(frame)
 cv2.imshow('two', two)
 cv2.waitKey(0)
-cv2.imwrite('smash_resources/2.png', two)
+cv2.imwrite('smash_resources_v2/2.png', two)
 
 for i in range(1, 450):
     cap.read()
 
 ret, frame = cap.read()
-four = frame[305:333, 150:175]
+four = grab_and_resize(frame)
 cv2.imshow('four', four)
 cv2.waitKey(0)
-cv2.imwrite('smash_resources/4.png', four)
+cv2.imwrite('smash_resources_v2/4.png', four)
 
 for i in range(1, 200):
     cap.read()
 
 ret, frame = cap.read()
-one = frame[305:333, 150:175]
+one = grab_and_resize(frame)
 cv2.imshow('one', one)
 cv2.waitKey(0)
-cv2.imwrite('smash_resources/1.png', one)
+cv2.imwrite('smash_resources_v2/1.png', one)
 
 for i in range(1, 300):
     cap.read()
 
 ret, frame = cap.read()
-three = frame[305:333, 150:175]
+three = grab_and_resize(frame)
 cv2.imshow('three', three)
 cv2.waitKey(0)
-cv2.imwrite('smash_resources/3.png', three)
+cv2.imwrite('smash_resources_v2/3.png', three)
 
 for i in range(1, 500):
     cap.read()
 
 ret, frame = cap.read()
-nine = frame[305:333, 150:175]
+nine = grab_and_resize(frame)
 cv2.imshow('nine', nine)
 cv2.waitKey(0)
-cv2.imwrite('smash_resources/9.png', nine)
+cv2.imwrite('smash_resources_v2/9.png', nine)
 
 for i in range(1, 900):
     cap.read()
 
 ret, frame = cap.read()
-six = frame[305:333, 150:175]
+six = grab_and_resize(frame)
 cv2.imshow('six', six)
 cv2.waitKey(0)
-cv2.imwrite('smash_resources/6.png', six)
+cv2.imwrite('smash_resources_v2/6.png', six)
 
 for i in range(1, 150):
     cap.read()
 
 ret, frame = cap.read()
-eight = frame[305:333, 150:175]
+eight = grab_and_resize(frame)
 cv2.imshow('eight', eight)
 cv2.waitKey(0)
-cv2.imwrite('smash_resources/8.png', eight)
+cv2.imwrite('smash_resources_v2/8.png', eight)
 
 for i in range(1, 300):
     cap.read()
 
 ret, frame = cap.read()
-five = frame[305:333, 150:175]
+five = grab_and_resize(frame)
 cv2.imshow('five', five)
 cv2.waitKey(0)
-cv2.imwrite('smash_resources/5.png', five)
+cv2.imwrite('smash_resources_v2/5.png', five)

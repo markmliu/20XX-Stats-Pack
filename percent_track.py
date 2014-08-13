@@ -4,18 +4,59 @@ import cv2
 import sys
 
 # hardcoded size of zero template...
-WIDTH = 25
-HEIGHT = 28
+WIDTH = 35
+HEIGHT = 39
 DIFF_METHOD = 'cv2.TM_CCOEFF_NORMED'
 # include a buffer for candidate size, augment each side by 5 pixels to account for shakiness
-BUFFER_SIZE = 5
+BUFFER_SIZE = 10
+
 def load_resources():
     # grab resources and put them into number_templates
     number_templates = []
     for i in range(0,10):
-        number_templates.append(cv2.imread('smash_resources/' + str(i) + '.png', 1))
+        number_templates.append(cv2.imread('smash_resources_v2/' + str(i) + '.png', 1))
     return number_templates
-        
+
+def read_and_preprocess_frame(cap, source):
+    # preprocess frame depending on source...
+    # assuming frame is in top 480 x 640 rectangle, chop just that
+    ret, frame = cap.read()
+    if ret == True:
+        if source == 'mangoFalco.mp4':
+            frame = frame[0:479, 0:639]
+        elif source == 'falconDitto.mp4':
+            #its only 360 x 480
+            frame = frame[0:359, 81:560]
+            frame = cv2.resize(frame, (640, 480))
+    return ret, frame
+
+def find_zeros(frame, zero):
+    #given frame and zero template, find top two matching locations using
+    #cv2.matchTemplate
+    diff = cv2.matchTemplate(frame, zero, eval(DIFF_METHOD))
+    cv2.imshow('diff', diff)
+    cv2.waitKey(0)
+    # flatten out the diff array so we can sort it
+    diff2 = np.reshape(diff, diff.shape[0]*diff.shape[1])
+    # sort in reverse order
+    sort = np.argsort(-diff2)
+    print "sort: " + str(sort)
+    ret = []
+    (y1, x1) = (np.unravel_index(sort[0], diff.shape)) #best match
+    ret.append((x1, y1))
+    (y2, x2) = (np.unravel_index(sort[1], diff.shape)) #second best match
+    ret.append((x2, y2))
+    print "ret: " + str(ret)
+    return ret
+
+def draw_around_percents(frame, extended_locations_found):
+    for top_left in extended_locations_found:
+        print "top left: " + str(top_left)
+        bottom_right = (top_left[0] + WIDTH + (2 * BUFFER_SIZE), top_left[1] + HEIGHT + (2 * BUFFER_SIZE))
+        cv2.rectangle(frame, top_left, bottom_right, 255, 2)
+    cv2.imshow('frame', frame)
+    cv2.waitKey(0)    
+
 def compare_with_previous(img1, img2, locations_found):
     # compare img1 with img2 and see if anything changed significantly in locations_found
     # if diff falls below diff_threshold, then percentage has changed
@@ -49,20 +90,24 @@ def match_to_number(candidate, number_templates):
             max_val = cur_val
             max_idx = index
     # if there's something reasonably close, return that...
-    if max_val > 0.5:
+    if max_val > 0.7:
         return max_idx
     # otherwise return -1
     return -1
 
 def extend_locations(locations):
-    # move each top_left up and to the left by 5 pixels each.  then
-    # for each zero location found, grab two boxes to the right
+    # for each 0 location found, find two boxes to right
+    # then extend each box by buffer size
+    DISTANCE = WIDTH - 3
     extended_locations = []
+    buffered_locations = []
     for location in locations:
-        extended_locations.append((location[0] - BUFFER_SIZE, location[1] - BUFFER_SIZE))
-        extended_locations.append((location[0] - WIDTH - BUFFER_SIZE, location[1] - BUFFER_SIZE))
-        extended_locations.append((location[0] - (2 * WIDTH) - BUFFER_SIZE, location[1] - BUFFER_SIZE))
-    return extended_locations    
+        extended_locations.append((location[0], location[1]))
+        extended_locations.append((location[0] - DISTANCE, location[1]))
+        extended_locations.append((location[0] - (2 * DISTANCE), location[1]))
+    for location in extended_locations:
+        buffered_locations.append((location[0] - BUFFER_SIZE, location[1] - BUFFER_SIZE))
+    return buffered_locations, extended_locations    
 
 def calculate_total_percent(ones, tens, hundreds):
     # calculate actual value from three digits...
@@ -96,43 +141,32 @@ def main(argv = sys.argv):
     file_name = sys.argv[1]
     frames_to_start = int(sys.argv[2])
     # is 1400, for falconDitto, 150 for mangoFalco
-    # if threshold greater than this, its a match
-    # maybe should just take top two instead..
-    threshold = 0.95
     
     cap = cv2.VideoCapture(file_name)
     # hardcode to find start of match now...should be able to find this programmatically
     for i in range(1, frames_to_start):
         cap.read()    
-    ret, frame = cap.read()
+    ret, frame = read_and_preprocess_frame(cap, file_name)
 
     # find where percentages are using template matching
     # load the zero template, use matchTemplate to find spots which are closest to it
     number_templates = load_resources()
     zero = number_templates[0]
-    diff = cv2.matchTemplate(frame, zero, eval(DIFF_METHOD))
-    cv2.imshow('diff', diff)
     # locations_found is the places where we think the zeros are
     # its an list of x,y pairs
-    locations_found_unzipped = np.where(diff > threshold)
-    locations_found = zip(locations_found_unzipped[1], locations_found_unzipped[0])
-    extended_locations_found = extend_locations(locations_found)
+    locations_found = find_zeros(frame, zero) 
+    extended_locations_found, _ = extend_locations(locations_found)
     # draw a rectangle around each location, using hardcoded values of size of percents
-    for top_left in extended_locations_found:
-        print "top left: " + str(top_left)
-        bottom_right = (top_left[0] + WIDTH + (2 * BUFFER_SIZE), top_left[1] + HEIGHT + (2 * BUFFER_SIZE))
-        cv2.rectangle(frame, top_left, bottom_right, 255, 2)
-    cv2.imshow('frame', frame)
-    cv2.waitKey(0)
+    draw_around_percents(frame, extended_locations_found)
 
-    _, previous_frame = cap.read()
+    _, previous_frame = read_and_preprocess_frame(cap, file_name)
     prev_stability = False
     frames_elapsed = 0
     percent_series_1 = []
     percent_series_2 = []
     time_series = []
     while(cap.isOpened()):
-        ret ,frame = cap.read()
+        ret ,frame = read_and_preprocess_frame(cap, file_name)
         frames_elapsed += 1
         if ret == True:
             cv2.imshow('frame', frame)
@@ -147,8 +181,8 @@ def main(argv = sys.argv):
                 best_guesses = []
                 for idx, location in enumerate(extended_locations_found):
                     candidate = frame[location[1]:location[1] + HEIGHT + (2 * BUFFER_SIZE), location[0]:location[0] + WIDTH + (2 * BUFFER_SIZE)]
-                    cv2.imshow('candidate', candidate)
-                    cv2.waitKey(0)
+                    # cv2.imshow('candidate', candidate)
+                    # cv2.waitKey(0)
                     best_guess = match_to_number(candidate, number_templates)
                     # print "location: " + str(idx)
                     # print "guessed percent: " + str(best_guess)

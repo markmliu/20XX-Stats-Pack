@@ -7,7 +7,7 @@ WIDTH = 35
 HEIGHT = 39
 DIFF_METHOD = 'cv2.TM_CCOEFF_NORMED'
 # include a buffer for candidate size, augment each side by 5 pixels to account for shakiness
-BUFFER_SIZE = 5
+BUFFER_SIZE = 8
 
 def load_resources():
     # grab resources and put them into number_templates

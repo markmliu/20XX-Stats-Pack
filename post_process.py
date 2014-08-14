@@ -75,6 +75,7 @@ def main(argv = sys.argv):
             # what if we didn't get info from that???
             # i guess put 0 there for no meaning we don't know who won.
             # can try to figure out later, when segmenting by stock
+            else:
                 winners.append(0)
             possible_match_ending_death_flag_1 = False
             possible_match_ending_death_flag_2 = False            
@@ -114,6 +115,7 @@ def main(argv = sys.argv):
         print "cleaned_series_2: " + str(cleaned_series_2)
         winner = winners[idx]
         if winner == 0:
+            print "winner unclear from reading percents for game " + str(idx + 1)
             if stocks_started_1 < stocks_started_2:
                 winner = 1
             if stocks_started_2 < stocks_started_1:
@@ -125,6 +127,6 @@ def main(argv = sys.argv):
         asdf.set_title('Game ' + str(idx+1) + ": Winner is Player " + str(winner))
     fig.subplots_adjust(hspace=.5)
     plt.show()
-    fig.savefig('temp.png', dpi = fig.dpi)
+    fig.savefig(data_file[:8]+'.png', dpi = fig.dpi)
 if __name__ == "__main__":
     main()

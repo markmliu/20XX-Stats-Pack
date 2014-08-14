@@ -120,10 +120,19 @@ def calculate_total_percent(ones, tens, hundreds):
         total += tens * 10
     return total
 
-def main(argv = sys.argv):
+def get_args(argv):
+    if len(argv) < 2:
+      print 'python percent_track.py <filename> <frames to skip>'
+      sys.exit()
 
     file_name = sys.argv[1]
     frames_to_start = int(sys.argv[2])
+
+    return file_name, frames_to_start
+
+def main(argv = sys.argv):
+    file_name, frames_to_start = get_args(argv) 
+
     # is 1400, for falconDitto, 150 for mangoFalco
     
     cap = cv2.VideoCapture(file_name)

@@ -120,11 +120,11 @@ def main(argv = sys.argv):
                 winner = 1
             if stocks_started_2 < stocks_started_1:
                 winner = 2
-
-        asdf = plt.subplot(num_matches, 1, idx+1)
+        num_stocks_won_by = abs(stocks_started_1 - stocks_started_2) + 1
+        subplt = plt.subplot(num_matches, 1, idx+1)
         plt.plot(time_series, cleaned_series_1, 'b-')
         plt.plot(time_series, cleaned_series_2, 'r-')
-        asdf.set_title('Game ' + str(idx+1) + ": Winner is Player " + str(winner))
+        subplt.set_title('Game ' + str(idx+1) + ": Winner is Player " + str(winner) + " by " + str(num_stocks_won_by) + " stocks")
     fig.subplots_adjust(hspace=.5)
     plt.show()
     fig.savefig(data_file[:8]+'.png', dpi = fig.dpi)

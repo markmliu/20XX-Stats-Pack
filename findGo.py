@@ -16,51 +16,86 @@
 #           if(found_start == false)
 #               size_down(go_template)
 
-
-import numpy as np
+import math
 import cv2
+
 
 FPS = 30
 DIFF_METHOD = 'cv2.TM_CCOEFF_NORMED'
 DIFF_THRESHOLD = 0.9
 
-cap = cv2.VideoCapture('falconDitto.mp4')
+#cap = cv2.VideoCapture('falconDitto.mp4')
+cap = cv2.VideoCapture('ppu-vs-stab.mp4')
+ret,frame = cap.read()
+vheight, vwidth = frame.shape[:2]
+
+print str(vwidth/3) + " " + str(vheight/3)
 
 go_template = cv2.imread('smash_resources_v2/go.png', 1)
+
+
+
+def reduceByX(frame, pixels):
+    _, w, h = frame.shape[::-1]
+
+    ratio = w/h
+    w = w - pixels;
+    h = int(math.floor(w/ratio))
+
+    ret = cv2.resize(frame, (w,h))
+    return ret
+
+
+
 _, w, h = go_template.shape[::-1]
-
-
-cv2.imshow('go', go_template)
+go_template = cv2.resize(go_template, (w/2, h/2))
 
 #jump jump past the first few seconds of no match (lessen wait time for tests)
-for i in range(1, 1350):
-    cap.read()
+#for i in range(1, 1350):
+#    cap.read()
 
 firstFrame = -1
 
-for i in range(1, 150):
-    ret,frame = cap.read()
+while firstFrame == -1:
 
-    diff = cv2.matchTemplate(frame, go_template, eval(DIFF_METHOD))
+    for i in range(1, FPS*5):
+        ret,frame = cap.read()
 
-    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(diff)
+        # later, calculate what it takes to make the image 240p
+        resizeAmount = 3
+        frame = cv2.resize(frame, (vwidth/resizeAmount, vheight/resizeAmount))
 
-    #print max_val
+        diff = cv2.matchTemplate(frame, go_template, eval(DIFF_METHOD))
 
-    if max_val > DIFF_THRESHOLD:
-        top_left = max_loc
-        bottom_right = (top_left[0] + w, top_left[1] + h)
-        cv2.rectangle(frame,top_left, bottom_right, 255, 2)
+        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(diff)
 
-        if firstFrame == -1:
-            firstFrame = i
-        lastFrame = i
+        #print max_val
 
-    cv2.imshow('video', frame)
+        if max_val > DIFF_THRESHOLD:
+            top_left = max_loc
+            bottom_right = (top_left[0] + (w/resizeAmount), top_left[1] + (h/resizeAmount))
+            cv2.rectangle(frame,top_left, bottom_right, 255, 2)
 
-    cv2.waitKey(1)
+            if firstFrame == -1:
+                firstFrame = i
+            lastFrame = i
 
-print "\"Go!\" detected on frames: " + str(firstFrame) + " to " + str(lastFrame)
+        cv2.imshow('video', frame)
+
+        cv2.waitKey(1)
+
+    if firstFrame == -1:
+        print "Couldnt find \"Go!\"..."
+        print "resizing go"
+    else:
+        print "\"Go!\" detected on frames: " + str(firstFrame) + " to " + str(lastFrame)
+
+    go_template = reduceByX(go_template, 3)
+    cv2.imshow('newgo', go_template)
+
+    #ideally we'd want to just jump to frame 0 again, but having trouble figuring that one out
+    cap = cv2.VideoCapture('ppu-vs-stab.mp4')
+    #cap = cv2.VideoCapture('falconDitto.mp4')
 
 # release the capture
 cap.release()

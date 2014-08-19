@@ -106,9 +106,12 @@ def main(argv = sys.argv):
     num_matches = len(matches)
     wins_1 = 0
     wins_2 = 0
+    max_match_length = -1
     for idx, match in enumerate(matches):
         # print "match: " + str(match)
         time_series =  [float(x[0])/FRAMES_PER_SEC for x in match]
+        if time_series[-1] > max_match_length:
+            max_match_length = time_series[-1]
         percent_series_1 = [x[1] for x in match]
         percent_series_2 = [x[2] for x in match]
         # print "percent_series_1: " + str(percent_series_1)
@@ -132,13 +135,17 @@ def main(argv = sys.argv):
         subplt = plt.subplot(num_matches, 1, idx+1)
         plt.plot(time_series, cleaned_series_1, 'b-')
         plt.plot(time_series, cleaned_series_2, 'r-')
+        plt.xlim([0,max_match_length + 5])
         subplt.set_title('Game ' + str(idx+1) + ": Winner is Player " + str(winner) + " by " + str(num_stocks_won_by) + " stocks")
+        subplt.set_xlabel('Seconds')
+        subplt.set_ylabel('Percent')
     set_count = "Set count: " + str(wins_1) + " - " + str(wins_2)
     fig.suptitle(set_count)
-    fig.subplots_adjust(hspace=.5)
+    fig.subplots_adjust(hspace=.75)
     plt.show()
     if not os.path.exists('graphs'):
         os.makedirs('graphs')
-    fig.savefig('graphs/' + data_file[:8]+'.png', dpi = fig.dpi)
+    data_file_name = data_file.split('/')[1].split('.')[0]
+    fig.savefig('graphs/' + data_file_name + '.png', dpi = fig.dpi)
 if __name__ == "__main__":
     main()

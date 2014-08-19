@@ -17,7 +17,7 @@ go = frame[155:195,242:355]
 """
 
 
-cap = cv2.VideoCapture('ppu-vs-stab.mp4')
+cap = cv2.VideoCapture('mangoFalco.mp4')
 
 # take first frame of the video
 ret,frame = cap.read()

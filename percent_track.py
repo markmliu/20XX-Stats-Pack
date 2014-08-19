@@ -125,6 +125,7 @@ def main(argv = sys.argv):
         frames_elapsed += 1
         if ret == True:
             cv2.imshow('frame', frame)
+            # cv2.waitKey(0)
             if not compare_with_previous(previous_frame, frame, locations_found):
                 # percentage will shake around, making it unstable
                 # wait until stable again to look for difference between it and previous one
@@ -158,7 +159,8 @@ def main(argv = sys.argv):
         previous_frame = frame
     if not os.path.exists('data'):
         os.makedirs('data')
-    f = open('data/' + file_name + '_data.csv','w')
+    file_name_stripped = file_name.split('.')[0]
+    f = open('data/' + file_name_stripped + '.csv','w')
     for idx, time_stamp in enumerate(time_series):
         f.write(str(time_stamp) + ', ' + str(percent_series_1[idx]) + ', ' + str(percent_series_2[idx]) + '\n')
     f.close()

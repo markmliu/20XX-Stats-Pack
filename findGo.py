@@ -89,6 +89,7 @@ while firstFrame == -1:
         print "resizing go"
     else:
         print "\"Go!\" detected on frames: " + str(firstFrame) + " to " + str(lastFrame)
+        print "at location " + str(top_left) + " with width " + str(w/resizeAmount) + " and height " + str(h/resizeAmount) 
 
     go_template = reduceByX(go_template, 3)
     cv2.imshow('newgo', go_template)

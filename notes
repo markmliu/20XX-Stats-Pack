@@ -1,0 +1,40 @@
+;; This buffer is for notes you don't want to save, and for Lisp evaluation.
+;; If you want to create a file, visit that file with C-x C-f,
+;; then enter the text in that file's own buffer.
+
+(81,0)
+(81,359)
+(559,0)
+(559,359)
+
+total is height of 359, width of 559-81 = 478 ~= 1.33
+
+height of 478, width of 645.  
+
+Wii can only output 640x480 pixels...means it should be natively 4:3 ratio
+but for some reason
+
+as match continues, can learn more examples of what 0 is 
+
+for falcon ditto, we want to crop from 0 to 359 vertically, 81 to 560 horizontally
+
+what to work on next:
+character
+derivative
+average character stock length?
+fixing boundary issues
+finding start of match programmatically
+display how many stocks you win by - done
+figure out ports
+
+go symbol is 234 x 74 from roki's
+
+in 480 x 640, top left should appear somewhere around 
+x = 219, v = 298 with a length of 154 and height of around 75 
+bottom right: 373, 259
+
+problem:  right now i assume match ends if both percents are missing.  therer is edge case where this can happen and match doesn't end
+go changes sizes...
+
+can grab pink falcon from falcon ditto at x=103,v=363 down to x=126,v=386
+blue falcon from falcon ditto at x=177,363 to x = 200,v=389

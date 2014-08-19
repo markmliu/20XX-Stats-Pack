@@ -1,4 +1,5 @@
 import sys
+import os
 import matplotlib.pyplot as plt
 # post-process data file to split matches, clean data, and upload graphs for each match
 FRAMES_PER_SEC = 30
@@ -103,6 +104,8 @@ def main(argv = sys.argv):
     # plot each match
     fig = plt.figure(1)
     num_matches = len(matches)
+    wins_1 = 0
+    wins_2 = 0
     for idx, match in enumerate(matches):
         # print "match: " + str(match)
         time_series =  [float(x[0])/FRAMES_PER_SEC for x in match]
@@ -114,19 +117,28 @@ def main(argv = sys.argv):
         print "cleaned_series_1: " + str(cleaned_series_1)
         print "cleaned_series_2: " + str(cleaned_series_2)
         winner = winners[idx]
+        # if winner is unclear from reading percents, try to figure out from stock count
         if winner == 0:
             print "winner unclear from reading percents for game " + str(idx + 1)
             if stocks_started_1 < stocks_started_2:
                 winner = 1
             if stocks_started_2 < stocks_started_1:
                 winner = 2
+        if winner == 1:
+            wins_1 += 1
+        if winner == 2:
+            wins_2 += 1
         num_stocks_won_by = abs(stocks_started_1 - stocks_started_2) + 1
         subplt = plt.subplot(num_matches, 1, idx+1)
         plt.plot(time_series, cleaned_series_1, 'b-')
         plt.plot(time_series, cleaned_series_2, 'r-')
         subplt.set_title('Game ' + str(idx+1) + ": Winner is Player " + str(winner) + " by " + str(num_stocks_won_by) + " stocks")
+    set_count = "Set count: " + str(wins_1) + " - " + str(wins_2)
+    fig.suptitle(set_count)
     fig.subplots_adjust(hspace=.5)
     plt.show()
-    fig.savefig(data_file[:8]+'.png', dpi = fig.dpi)
+    if not os.path.exists('graphs'):
+        os.makedirs('graphs')
+    fig.savefig('graphs/' + data_file[:8]+'.png', dpi = fig.dpi)
 if __name__ == "__main__":
     main()

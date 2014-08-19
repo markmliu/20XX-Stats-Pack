@@ -122,24 +122,38 @@ def calculate_total_percent(ones, tens, hundreds):
 
 def get_args(argv):
     if len(argv) < 2:
-      print 'python percent_track.py <filename> <frames to skip>'
-      sys.exit()
+        print 'python percent_track.py <filename> <frames to skip>'
+        sys.exit()
 
     file_name = sys.argv[1]
-    frames_to_start = int(sys.argv[2])
+
+    # 1400 frames to start for falconDitto, 150 for mangoFalco
+    if len(argv) < 3:
+      frames_to_start = 0
+    else:
+      frames_to_start = int(sys.argv[2])
 
     return file_name, frames_to_start
 
-def main(argv = sys.argv):
-    file_name, frames_to_start = get_args(argv) 
-
-    # is 1400, for falconDitto, 150 for mangoFalco
-    
-    cap = cv2.VideoCapture(file_name)
-    # hardcode to find start of match now...should be able to find this programmatically
+def forward_video(video_data, frames_to_start):
     for i in range(1, frames_to_start):
-        cap.read()    
-    ret, frame = read_and_preprocess_frame(cap, file_name)
+        video_data['cap'].read()    
+    video_data['ret'], video_data['frame'] = read_and_preprocess_frame(video_data['cap'], video_data['file_name'])
+
+    return video_data
+
+def init_video(argv):
+    file_name, frames_to_start = get_args(argv) 
+    cap = cv2.VideoCapture(file_name)
+
+    video_data = {'cap': cap, 'file_name': file_name}
+
+    video_data = forward_video(video_data, frames_to_start)
+
+    return video_data
+
+def main(argv = sys.argv):
+    video_data = init_video(argv)
 
     # find where percentages are using template matching
     # load the zero template, use matchTemplate to find spots which are closest to it
@@ -147,23 +161,23 @@ def main(argv = sys.argv):
     zero = number_templates[0]
     # locations_found is the places where we think the zeros are
     # its an list of x,y pairs
-    locations_found = find_zeros(frame, zero) 
+    locations_found = find_zeros(video_data['frame'], zero) 
     extended_locations_found, _ = extend_locations(locations_found)
     # draw a rectangle around each location, using hardcoded values of size of percents
-    draw_around_percents(frame, extended_locations_found)
+    draw_around_percents(video_data['frame'], extended_locations_found)
 
-    _, previous_frame = read_and_preprocess_frame(cap, file_name)
+    _, previous_frame = read_and_preprocess_frame(video_data['cap'], video_data['file_name'])
     prev_stability = False
     frames_elapsed = 0
     percent_series_1 = []
     percent_series_2 = []
     time_series = []
-    while(cap.isOpened()):
-        ret ,frame = read_and_preprocess_frame(cap, file_name)
+    while(video_data['cap'].isOpened()):
+        video_data['ret'] ,video_data['frame'] = read_and_preprocess_frame(video_data['cap'], video_data['file_name'])
         frames_elapsed += 1
-        if ret == True:
-            cv2.imshow('frame', frame)
-            if not compare_with_previous(previous_frame, frame, locations_found):
+        if video_data['ret'] == True:
+            cv2.imshow('frame', video_data['frame'])
+            if not compare_with_previous(previous_frame, video_data['frame'], locations_found):
                 # percentage will shake around, making it unstable
                 # wait until stable again to look for difference between it and previous one
                 cur_stability = False
@@ -173,7 +187,7 @@ def main(argv = sys.argv):
             if cur_stability and not prev_stability:
                 best_guesses = []
                 for idx, location in enumerate(extended_locations_found):
-                    candidate = frame[location[1]:location[1] + HEIGHT + (2 * BUFFER_SIZE), location[0]:location[0] + WIDTH + (2 * BUFFER_SIZE)]
+                    candidate = video_data['frame'][location[1]:location[1] + HEIGHT + (2 * BUFFER_SIZE), location[0]:location[0] + WIDTH + (2 * BUFFER_SIZE)]
                     # cv2.imshow('candidate', candidate)
                     # cv2.waitKey(0)
                     best_guess = match_to_number(candidate, number_templates)
@@ -193,14 +207,14 @@ def main(argv = sys.argv):
             prev_stability = cur_stability
         else:
             break
-        previous_frame = frame
-    f = open(file_name + '_data.csv','w')
+        previous_frame = video_data['frame']
+    f = open(video_data['file_name'] + '_data.csv','w')
     for idx, time_stamp in enumerate(time_series):
         f.write(str(time_stamp) + ', ' + str(percent_series_1[idx]) + ', ' + str(percent_series_2[idx]) + '\n')
     f.close()
                
     cv2.destroyAllWindows()
-    cap.release()
+    video_data['cap'].release()
 
 if __name__ == "__main__":
     main()

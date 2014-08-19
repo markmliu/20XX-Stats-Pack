@@ -1,52 +1,14 @@
 import numpy as np
 import cv2
 import sys
-
+import os
+from smash_util import *
 # hardcoded size of zero template...
 WIDTH = 35
 HEIGHT = 39
 DIFF_METHOD = 'cv2.TM_CCOEFF_NORMED'
 # include a buffer for candidate size, augment each side by 5 pixels to account for shakiness
 BUFFER_SIZE = 8
-
-def load_resources():
-    # grab resources and put them into number_templates
-    number_templates = []
-    for i in range(0,10):
-        number_templates.append(cv2.imread('smash_resources_v2/' + str(i) + '.png', 1))
-    return number_templates
-
-def read_and_preprocess_frame(cap, source):
-    # preprocess frame depending on source...
-    # assuming frame is in top 480 x 640 rectangle, chop just that
-    ret, frame = cap.read()
-    if ret == True:
-        if source == 'mangoFalco.mp4':
-            frame = frame[0:479, 0:639]
-        elif source == 'falconDitto.mp4':
-            #its only 360 x 480
-            frame = frame[0:359, 81:560]
-            frame = cv2.resize(frame, (640, 480))
-    return ret, frame
-
-def find_zeros(frame, zero):
-    #given frame and zero template, find top two matching locations using
-    #cv2.matchTemplate
-    diff = cv2.matchTemplate(frame, zero, eval(DIFF_METHOD))
-    cv2.imshow('diff', diff)
-    cv2.waitKey(0)
-    # flatten out the diff array so we can sort it
-    diff2 = np.reshape(diff, diff.shape[0]*diff.shape[1])
-    # sort in reverse order
-    sort = np.argsort(-diff2)
-    print "sort: " + str(sort)
-    ret = []
-    (y1, x1) = (np.unravel_index(sort[0], diff.shape)) #best match
-    ret.append((x1, y1))
-    (y2, x2) = (np.unravel_index(sort[1], diff.shape)) #second best match
-    ret.append((x2, y2))
-    print "ret: " + str(ret)
-    return ret
 
 def draw_around_percents(frame, extended_locations_found):
     for top_left in extended_locations_found:
@@ -147,7 +109,7 @@ def main(argv = sys.argv):
     zero = number_templates[0]
     # locations_found is the places where we think the zeros are
     # its an list of x,y pairs
-    locations_found = find_zeros(frame, zero) 
+    locations_found = find_zeros(frame, zero, DIFF_METHOD) 
     extended_locations_found, _ = extend_locations(locations_found)
     # draw a rectangle around each location, using hardcoded values of size of percents
     draw_around_percents(frame, extended_locations_found)
@@ -194,7 +156,9 @@ def main(argv = sys.argv):
         else:
             break
         previous_frame = frame
-    f = open(file_name + '_data.csv','w')
+    if not os.path.exists('data'):
+        os.makedirs('data')
+    f = open('data/' + file_name + '_data.csv','w')
     for idx, time_stamp in enumerate(time_series):
         f.write(str(time_stamp) + ', ' + str(percent_series_1[idx]) + ', ' + str(percent_series_2[idx]) + '\n')
     f.close()

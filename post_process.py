@@ -107,11 +107,16 @@ def main(argv = sys.argv):
     wins_1 = 0
     wins_2 = 0
     max_match_length = -1
-    for idx, match in enumerate(matches):
-        # print "match: " + str(match)
-        time_series =  [float(x[0])/FRAMES_PER_SEC for x in match]
+
+    # calculate longest match
+    for match in matches:
+        time_series = [float(x[0])/FRAMES_PER_SEC for x in match]
         if time_series[-1] > max_match_length:
             max_match_length = time_series[-1]
+            
+    for idx, match in enumerate(matches):
+        # print "match: " + str(match)
+        time_series = [float(x[0])/FRAMES_PER_SEC for x in match]
         percent_series_1 = [x[1] for x in match]
         percent_series_2 = [x[2] for x in match]
         # print "percent_series_1: " + str(percent_series_1)

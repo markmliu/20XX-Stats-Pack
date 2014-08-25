@@ -15,7 +15,13 @@ def find_zeros(frame, zero, diff_method):
     ret = []
     (y1, x1) = (np.unravel_index(sort[0], diff.shape)) #best match
     ret.append((x1, y1))
-    (y2, x2) = (np.unravel_index(sort[1], diff.shape)) #second best match
+    y2 = y1
+    x2 = x1
+    idx = 1
+    # make sure second point is far enough away from first point
+    while abs(y2 - y1) < 5 and abs(x2 - x1) < 5:
+        (y2, x2) = (np.unravel_index(sort[idx], diff.shape)) #second best match
+        idx += 1
     ret.append((x2, y2))
     print "ret: " + str(ret)
     return ret
@@ -37,6 +43,10 @@ def read_and_preprocess_frame(cap, source):
         elif source == 'falconDitto.mp4':
             #its only 360 x 480
             frame = frame[0:359, 81:560]
+            frame = cv2.resize(frame, (640, 480))
+        elif source == 'ppu-vs-stab.mp4':
+            #its 720 x 960
+            frame = frame[0:719, 0:959]
             frame = cv2.resize(frame, (640, 480))
     return ret, frame
 

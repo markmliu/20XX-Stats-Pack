@@ -1,5 +1,6 @@
 import os
 import time
+import datetime
 import wx
 import MplayerCtrl as mpc
 import wx.lib.buttons as buttons
@@ -8,7 +9,7 @@ dirName = os.path.dirname(os.path.abspath(__file__))
 bitmapDir = os.path.join(dirName, 'bitmaps')
 
 class videoPlayer(wx.Frame):
-    def __init__(self, parent, id, title, mplayer, mediaFile = None):
+    def __init__(self, parent, id, title, mplayer):
         wx.Frame.__init__(self, parent, id, title, size = wx.DisplaySize())
         self.panel = wx.Panel(self)
         sp = wx.StandardPaths.Get()
@@ -20,24 +21,28 @@ class videoPlayer(wx.Frame):
         controlSizer = self.build_controls()
         sliderSizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.mplayer = mpc.MplayerCtrl(self.panel, -1, mplayer, mediaFile)
+        self.mplayer = mpc.MplayerCtrl(self.panel, -1, mplayer)
         self.playbackSlider = wx.Slider(self.panel, size = wx.DefaultSize)
         sliderSizer.Add(self.playbackSlider, 1, wx.ALL | wx.EXPAND, 5)
 
         # create volume control
-        self.volumeCtrl = wx.Slider(self.panel)
+        self.volumeCtrl = wx.Slider(self.panel, style = wx.SL_VERTICAL | wx.SL_INVERSE, size = (-1, 50))
         self.volumeCtrl.SetRange(0, 100)
         self.volumeCtrl.SetValue(self.currentVolume)
         self.volumeCtrl.Bind(wx.EVT_SLIDER, self.on_set_volume)
         controlSizer.Add(self.volumeCtrl, 0, wx.ALL, 5)
         
         # create track counter
-        self.trackCounter = wx.StaticText(self.panel, label = "00:00")
-        sliderSizer.Add(self.trackCounter, 0, wx.ALL | wx.CENTER, 5)
+        self.trackCounter = wx.StaticText(self.panel, label = "0:00:00")
+        sliderSizer.Add(self.trackCounter, 0, wx.ALL | wx.CENTER, 7)
         
         # set up playback timer
         self.playbackTimer = wx.Timer(self)
-        self.Bind(wx.EVT_TIMER, self.on_update_playback)
+        # for some reason timer only triggers once every second?
+        self.Bind(wx.EVT_TIMER, self.on_update_playback, self.playbackTimer)
+
+        # bind playback slider to playback timer?
+        self.playbackSlider.Bind(wx.EVT_SLIDER, self.on_set_time)
 
         mainSizer.Add(self.mplayer, 1, wx.ALL | wx.EXPAND, 5)
         mainSizer.Add(sliderSizer, 0, wx.ALL | wx.EXPAND, 5)
@@ -61,7 +66,7 @@ class videoPlayer(wx.Frame):
         btn = buttons.GenBitmapButton(self.panel, bitmap = img, name = btnDict['name'])
         btn.SetInitialSize()
         btn.Bind(wx.EVT_BUTTON, handler)
-        sizer.Add(btn, 0, wx.LEFT, 3)
+        sizer.Add(btn, 0, wx.EXPAND, 3)
 
     #---------------------------------------------------------
     def build_controls(self):
@@ -73,7 +78,9 @@ class videoPlayer(wx.Frame):
         btnData = [{'bitmap':'player_pause.png', 
                     'handler':self.on_pause, 'name':'pause'},
                    {'bitmap':'player_stop.png',
-                    'handler':self.on_stop, 'name':'stop'}]
+                    'handler':self.on_stop, 'name':'stop'},
+                   {'bitmap':'player_fast_forward.png',
+                    'handler':self.on_ff, 'name':'ff'}]
         for btn in btnData:
             self.build_btn(btn, controlSizer)
  
@@ -110,15 +117,15 @@ class videoPlayer(wx.Frame):
             self.currentFolder = os.path.dirname(path[0])
             trackPath = '"%s"' % path.replace("\\", "/")
             self.mplayer.Loadfile(trackPath)
- 
-            t_len = self.mplayer.GetTimeLength()
-            self.playbackSlider.SetRange(0, t_len)
-            self.playbackTimer.Start(100)
- 
+            self.playbackTimer.Start()
+            self.mplayer.Start()
  
     #----------------------------------------------------------------------
     def on_media_started(self, event):
         print 'Media started!'
+        t_len = self.mplayer.GetTimeLength()
+        self.playbackSlider.SetRange(0, t_len)
+        self.playbackTimer.Start(100, oneShot = True)
  
     #----------------------------------------------------------------------
     def on_media_finished(self, event):
@@ -130,13 +137,20 @@ class videoPlayer(wx.Frame):
 
         if self.playbackTimer.IsRunning():
             print "pausing..."
+            print self.mplayer.GetTimePos()
             self.mplayer.Pause()
             self.playbackTimer.Stop()
+            
         else:
             print "unpausing..."
             self.mplayer.Pause()
             self.playbackTimer.Start()
  
+    #----------------------------------------------------------------------
+    def on_ff(self, event):
+        print "speeding up by 1.25 x"
+        self.mplayer.SpeedMult(1.25)
+
     #----------------------------------------------------------------------
     def on_process_started(self, event):
         print 'Process started!'
@@ -152,7 +166,14 @@ class videoPlayer(wx.Frame):
         """
         self.currentVolume = self.volumeCtrl.GetValue()
         self.mplayer.SetProperty("volume", self.currentVolume)
- 
+  
+    #----------------------------------------------------------------------
+    def on_set_time(self, event):
+        """
+        Sets the video according to playback slider
+        """
+        currentSeconds = self.GetValue()
+        self.mplayer.Seek(self.currentSeconds, 2)
     #----------------------------------------------------------------------
     def on_stop(self, event):
 
@@ -169,18 +190,17 @@ class videoPlayer(wx.Frame):
             offset = self.mplayer.GetTimePos()
         except:
             return
-        print offset
+        print "on_update_playback offset: " + str(offset)
         mod_off = str(offset)[-1]
-        if mod_off == '0':
-            print "mod_off"
-            offset = int(offset)
-            self.playbackSlider.SetValue(offset)
-            secsPlayed = time.strftime('%M:%S', time.gmtime(offset))
-            self.trackCounter.SetLabel(secsPlayed)
+        # if mod_off == '0':
+        #    print "mod_off"
+        secsPlayed = int(offset)
+        self.playbackSlider.SetValue(secsPlayed)
+        self.trackCounter.SetLabel(str(datetime.timedelta(seconds=secsPlayed)))
     
 class app(wx.App):
     def OnInit(self):
-        frame = videoPlayer(None, -1, 'Hello', u'mplayer', u'falconDitto.mp4')
+        frame = videoPlayer(None, -1, 'Hello', u'mplayer')
         self.SetTopWindow(frame)
         frame.Show()
         return 1

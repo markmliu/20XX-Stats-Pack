@@ -4,6 +4,33 @@ import cv2
 import pickle
 
 
+class StreamFeed(object):
+
+    def __init__(self):
+        manager = Manager()
+        frame_list = manager.list([None])
+        self.frame_list = frame_list
+        self.started = False
+
+    def StartStreaming(self, video_name):
+        if self.started:
+            print "Stream already started!"
+            return
+        p = Process(target = _stream_video, args = (video_name, self.frame_list))
+        p.start()
+        self.started = True
+
+    def GetFrame(self):
+        if not self.started: return None
+
+        try:
+            value = self.frame_list[0]
+        except:
+            return None
+
+        return value
+
+
 def _stream_video(video_name, frame_list):
     cap = cv2.VideoCapture(video_name)
     while cap.isOpened():
@@ -26,28 +53,10 @@ def _write_frame(value, frame_list):
         return False
 
 
-class StreamFeed(object):
-
-    def __init__(self):
-        manager = Manager()
-        frame_list = manager.list([None])
-        self.frame_list = frame_list
-
-    def StartStreaming(self, video_name):
-        p = Process(target = _stream_video, args = (video_name, self.frame_list))
-        p.start()
-
-    def GetFrame(self):
-        try:
-            value = self.frame_list[0]
-        except:
-            return None
-
-        return value
-
-
 # ======= example usage: ========
 
+# simulate a heavy process that takes 0.25 seconds
+# so you can only sample the video every .25 seconds
 if __name__ == '__main__':
     stream = StreamFeed()
 
@@ -68,7 +77,7 @@ if __name__ == '__main__':
 
         # Display the resulting frame
         cv2.imshow('frame',frame)
-        cv2.waitKey(25)
+        cv2.waitKey(1)
 
         frame = stream.GetFrame()
 

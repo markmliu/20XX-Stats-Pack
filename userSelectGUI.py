@@ -80,7 +80,9 @@ class videoPlayer(wx.Frame):
                    {'bitmap':'player_stop.png',
                     'handler':self.on_stop, 'name':'stop'},
                    {'bitmap':'player_fast_forward.png',
-                    'handler':self.on_ff, 'name':'ff'}]
+                    'handler':self.on_ff, 'name':'ff'},
+                   {'bitmap':'player_crop.png',
+                    'handler':self.on_crop, 'name':'crop'}]
         for btn in btnData:
             self.build_btn(btn, controlSizer)
  
@@ -146,6 +148,42 @@ class videoPlayer(wx.Frame):
             self.mplayer.Pause()
             self.playbackTimer.Start()
  
+    #----------------------------------------------------------------------
+    def on_crop(self, event):
+        # pause video if it hasn't been paused yet
+        if self.playbackTimer.IsRunning():
+            self.on_pause(event)
+        screenshot = self.mplayer.Screenshot(0)
+        print "screenshot: " + str(screenshot)
+        # bind to mouse clicks to draw rectangle??
+        self.mplayer.Bind(wx.EVT_LEFT_DOWN, self.start_rectangle)
+        self.mplayer.Bind(wx.EVT_LEFT_UP, self.finish_rectangle)
+
+    #----------------------------------------------------------------------
+    def start_rectangle(self, event):
+        (x, y) = event.GetPositionTuple()
+        self.start_x = x
+        self.start_y = y
+        print "start rectangle at x-coord: " + str(x) + " and y-coord: " + str(y)
+
+
+    #----------------------------------------------------------------------
+    def finish_rectangle(self, event):
+        (x, y) = event.GetPositionTuple()
+        self.finish_x = x
+        self.finish_y = y
+        # coordinates go from left to right, top to bottom.
+        # figure out top left from corners...
+
+        top_left_x = min(self.start_x, self.finish_x)
+        top_left_y = min(self.start_y, self.finish_y)
+        width = abs(self.start_x - self.finish_x)
+        height = abs(self.start_y - self.finish_y)
+        
+        dc = wx.ClientDC(self.mplayer)
+        dc.DrawRectangle(top_left_x, top_left_y, width, height)
+        print "finish rectangle"        
+
     #----------------------------------------------------------------------
     def on_ff(self, event):
         print "speeding up by 1.25 x"

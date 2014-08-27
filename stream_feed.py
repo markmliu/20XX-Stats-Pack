@@ -1,7 +1,6 @@
 from multiprocessing import Process, Manager
 import time
 import cv2
-import pickle
 
 
 class StreamFeed(object):
@@ -32,7 +31,7 @@ class StreamFeed(object):
         return True, value
 
 
-def _stream_video(video_name, frame_list):
+def _stream_video(video_name, frame_list, frame_delay = 0.025):
     cap = cv2.VideoCapture(video_name)
     while cap.isOpened():
         ret, frame = cap.read()
@@ -41,7 +40,7 @@ def _stream_video(video_name, frame_list):
         if _write_frame(frame,frame_list) == False:
             break
 
-        time.sleep(0.025) # wait ms to simulate a video input stream
+        time.sleep(frame_delay) # wait ms to simulate a video input stream
 
     cap.release()
     _write_frame(None, frame_list)

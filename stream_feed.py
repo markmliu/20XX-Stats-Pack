@@ -21,14 +21,15 @@ class StreamFeed(object):
         self.started = True
 
     def GetFrame(self):
-        if not self.started: return None
+        if not self.started: return False, None
 
         try:
             value = self.frame_list[0]
         except:
-            return None
+            return False, None
 
-        return value
+        if value is None: return False, None
+        return True, value
 
 
 def _stream_video(video_name, frame_list):
@@ -63,13 +64,12 @@ if __name__ == '__main__':
     stream.StartStreaming('falconDittoTrim.mp4')
 
     # wait until it's started
-    frame = stream.GetFrame()
-    while frame is None:
+    ret, frame = stream.GetFrame()
+    while ret is False:
         time.sleep(0.010) 
-        frame = stream.GetFrame()
+        ret, frame = stream.GetFrame()
 
-    
-    while frame is not None:
+    while ret != False:
 
     # --- Example operations
         # wait to simulate heavy processing
@@ -79,7 +79,7 @@ if __name__ == '__main__':
         cv2.imshow('frame',frame)
         cv2.waitKey(1)
 
-        frame = stream.GetFrame()
+        ret, frame = stream.GetFrame()
 
     cv2.destroyAllWindows()
 

@@ -42,17 +42,17 @@ class videoPlayer(wx.Frame):
         self.Bind(wx.EVT_TIMER, self.on_update_playback, self.playbackTimer)
 
         # bind playback slider to playback timer?
-        self.playbackSlider.Bind(wx.EVT_SLIDER, self.on_set_time)
+        # self.playbackSlider.Bind(wx.EVT_SLIDER, self.on_set_time)
 
         mainSizer.Add(self.mplayer, 1, wx.ALL | wx.EXPAND, 5)
         mainSizer.Add(sliderSizer, 0, wx.ALL | wx.EXPAND, 5)
         mainSizer.Add(controlSizer, 0, wx.ALL | wx.CENTER, 5)
         self.panel.SetSizer(mainSizer)
         
-        self.Bind(mpc.EVT_MEDIA_STARTED, self.on_media_started)
-        self.Bind(mpc.EVT_MEDIA_FINISHED, self.on_media_finished)
-        self.Bind(mpc.EVT_PROCESS_STARTED, self.on_process_started)
-        self.Bind(mpc.EVT_PROCESS_STOPPED, self.on_process_stopped)
+        self.panel.Bind(mpc.EVT_MEDIA_STARTED, self.on_media_started)
+        self.panel.Bind(mpc.EVT_MEDIA_FINISHED, self.on_media_finished)
+        self.panel.Bind(mpc.EVT_PROCESS_STARTED, self.on_process_started)
+        self.panel.Bind(mpc.EVT_PROCESS_STOPPED, self.on_process_stopped)
  
         self.Show()
         self.panel.Layout()
@@ -126,8 +126,9 @@ class videoPlayer(wx.Frame):
     def on_media_started(self, event):
         print 'Media started!'
         t_len = self.mplayer.GetTimeLength()
-        self.playbackSlider.SetRange(0, t_len)
-        self.playbackTimer.Start(100, oneShot = True)
+        print "total length of video: " + str(t_len)
+        self.playbackSlider.SetRange(0, int(t_len + 1))
+        self.playbackTimer.Start(100)
  
     #----------------------------------------------------------------------
     def on_media_finished(self, event):
@@ -181,6 +182,8 @@ class videoPlayer(wx.Frame):
         height = abs(self.start_y - self.finish_y)
         
         dc = wx.ClientDC(self.mplayer)
+        dc.SetPen(wx.Pen(wx.RED, 1, wx.SOLID))
+        dc.SetBrush(wx.Brush("grey", style = wx.TRANSPARENT))
         dc.DrawRectangle(top_left_x, top_left_y, width, height)
         print "finish rectangle"        
 
@@ -210,8 +213,8 @@ class videoPlayer(wx.Frame):
         """
         Sets the video according to playback slider
         """
-        currentSeconds = self.GetValue()
-        self.mplayer.Seek(self.currentSeconds, 2)
+        current_seconds = self.GetValue()
+        self.mplayer.Seek(self.current_seconds, 2)
     #----------------------------------------------------------------------
     def on_stop(self, event):
 
@@ -229,12 +232,9 @@ class videoPlayer(wx.Frame):
         except:
             return
         print "on_update_playback offset: " + str(offset)
-        mod_off = str(offset)[-1]
-        # if mod_off == '0':
-        #    print "mod_off"
-        secsPlayed = int(offset)
-        self.playbackSlider.SetValue(secsPlayed)
-        self.trackCounter.SetLabel(str(datetime.timedelta(seconds=secsPlayed)))
+        secs_played = int(offset)
+        self.playbackSlider.SetValue(secs_played)
+        self.trackCounter.SetLabel(str(datetime.timedelta(seconds=secs_played)))
     
 class app(wx.App):
     def OnInit(self):

@@ -11,8 +11,8 @@ bitmapDir = os.path.join(dirName, 'bitmaps')
 class videoPlayer(wx.Frame):
     def __init__(self, parent, id, title, mplayer):
         wx.Frame.__init__(self, parent, id, title, size = wx.DisplaySize())
-        self.overlay = wx.Overlay()
         self.panel = wx.Panel(self)
+        self.overlay = wx.Overlay()
         sp = wx.StandardPaths.Get()
         self.currentFolder = sp.GetDocumentsDir()
         self.currentVolume = 50
@@ -120,13 +120,14 @@ class videoPlayer(wx.Frame):
             trackPath = '"%s"' % path.replace("\\", "/")
             self.mplayer.Loadfile(trackPath)
             self.playbackTimer.Start()
-            self.mplayer.Start()
+            self.mplayer.Start(mplayer_args=[u'--no-fs'])
  
     #----------------------------------------------------------------------
     def on_media_started(self, event):
         print 'Media started!'
         t_len = self.mplayer.GetTimeLength()
         print "total length of video: " + str(t_len)
+        print "video resolution: " + str(self.mplayer.GetVideoResolution())
         self.playbackSlider.SetRange(0, int(t_len + 1))
         self.playbackTimer.Start(100)
  
@@ -176,15 +177,32 @@ class videoPlayer(wx.Frame):
         del odc #bug in python, this makes sure odc destroyed before dc
     
     #----------------------------------------------------------------------
+    def enforce_ratio(self, pos):
+        # make sure selected rectangle is 4:3 ratio.  If it's not, find closest
+        # point on same plane that would make it correct
+        width = abs(self.start_pos.x - pos.x)
+        required_height = int(float(3) / 4 * width)
+        if pos.y < self.start_pos.y:
+            return (pos.x, self.start_pos.y - required_height)
+        else:
+            return (pos.x, self.start_pos.y + required_height)
+
+    #----------------------------------------------------------------------
     def intermediate_rectangle(self, event):
         # redraw intermediate rectangles, so user knows what it looks like so far
         if event.Dragging and event.LeftIsDown():
-            self.redraw_rectangle(event.GetPosition())
+            intermediate_pos = self.enforce_ratio(event.GetPosition())
+            self.redraw_rectangle(intermediate_pos)
 
     #----------------------------------------------------------------------
     def finish_rectangle(self, event):
-        self.finish_pos = event.GetPosition()
+        self.finish_pos = self.enforce_ratio(event.GetPosition())
         self.redraw_rectangle(self.finish_pos)
+        dc = wx.ClientDC(self)
+        odc = wx.DCOverlay(self.overlay, dc)
+        odc.Clear()
+        del odc
+        self.overlay.Reset()
         print "finish rectangle"        
 
     #----------------------------------------------------------------------
@@ -231,7 +249,7 @@ class videoPlayer(wx.Frame):
             offset = self.mplayer.GetTimePos()
         except:
             return
-        print "on_update_playback offset: " + str(offset)
+        # print "on_update_playback offset: " + str(offset)
         secs_played = int(offset)
         self.playbackSlider.SetValue(secs_played)
         self.trackCounter.SetLabel(str(datetime.timedelta(seconds=secs_played)))

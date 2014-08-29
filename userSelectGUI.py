@@ -11,6 +11,7 @@ bitmapDir = os.path.join(dirName, 'bitmaps')
 class videoPlayer(wx.Frame):
     def __init__(self, parent, id, title, mplayer):
         wx.Frame.__init__(self, parent, id, title, size = wx.DisplaySize())
+        self.overlay = wx.Overlay()
         self.panel = wx.Panel(self)
         sp = wx.StandardPaths.Get()
         self.currentFolder = sp.GetDocumentsDir()
@@ -38,7 +39,6 @@ class videoPlayer(wx.Frame):
         
         # set up playback timer
         self.playbackTimer = wx.Timer(self)
-        # for some reason timer only triggers once every second?
         self.Bind(wx.EVT_TIMER, self.on_update_playback, self.playbackTimer)
 
         # bind playback slider to playback timer?
@@ -154,37 +154,37 @@ class videoPlayer(wx.Frame):
         # pause video if it hasn't been paused yet
         if self.playbackTimer.IsRunning():
             self.on_pause(event)
-        screenshot = self.mplayer.Screenshot(0)
-        print "screenshot: " + str(screenshot)
-        # bind to mouse clicks to draw rectangle??
+        # bind to mouse clicks to draw rectangle
         self.mplayer.Bind(wx.EVT_LEFT_DOWN, self.start_rectangle)
         self.mplayer.Bind(wx.EVT_LEFT_UP, self.finish_rectangle)
 
     #----------------------------------------------------------------------
     def start_rectangle(self, event):
-        (x, y) = event.GetPositionTuple()
-        self.start_x = x
-        self.start_y = y
-        print "start rectangle at x-coord: " + str(x) + " and y-coord: " + str(y)
+        self.start_pos = event.GetPosition()
+        self.mplayer.Bind(wx.EVT_MOTION, self.intermediate_rectangle)
+        print "start rectangle at " + str(self.start_pos)
 
+    #----------------------------------------------------------------------
+    def redraw_rectangle(self, pos):
+        rect = wx.RectPP(self.start_pos, pos)
+        dc = wx.ClientDC(self.mplayer)
+        odc = wx.DCOverlay(self.overlay, dc)
+        odc.Clear()
+        dc.SetPen(wx.Pen(wx.RED, 1, wx.SOLID))
+        dc.SetBrush(wx.Brush("grey", style = wx.TRANSPARENT))
+        dc.DrawRectangleRect(rect)
+        del odc #bug in python, this makes sure odc destroyed before dc
+    
+    #----------------------------------------------------------------------
+    def intermediate_rectangle(self, event):
+        # redraw intermediate rectangles, so user knows what it looks like so far
+        if event.Dragging and event.LeftIsDown():
+            self.redraw_rectangle(event.GetPosition())
 
     #----------------------------------------------------------------------
     def finish_rectangle(self, event):
-        (x, y) = event.GetPositionTuple()
-        self.finish_x = x
-        self.finish_y = y
-        # coordinates go from left to right, top to bottom.
-        # figure out top left from corners...
-
-        top_left_x = min(self.start_x, self.finish_x)
-        top_left_y = min(self.start_y, self.finish_y)
-        width = abs(self.start_x - self.finish_x)
-        height = abs(self.start_y - self.finish_y)
-        
-        dc = wx.ClientDC(self.mplayer)
-        dc.SetPen(wx.Pen(wx.RED, 1, wx.SOLID))
-        dc.SetBrush(wx.Brush("grey", style = wx.TRANSPARENT))
-        dc.DrawRectangle(top_left_x, top_left_y, width, height)
+        self.finish_pos = event.GetPosition()
+        self.redraw_rectangle(self.finish_pos)
         print "finish rectangle"        
 
     #----------------------------------------------------------------------

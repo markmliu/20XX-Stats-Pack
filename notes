@@ -38,3 +38,13 @@ go changes sizes...
 
 can grab pink falcon from falcon ditto at x=103,v=363 down to x=126,v=386
 blue falcon from falcon ditto at x=177,363 to x = 200,v=389
+
+current issues: 
+force box to be 4:3 ratio done
+show box while mouse is held down done
+redraw dc/odc when new crop is started?
+4:3 ratio doesn't seem quite right.
+make sure video is being opened at correct aspect ratio, seems to be full screen right now
+
+set up vram
+make sure percent_track works with live recording

@@ -5,6 +5,40 @@ import matplotlib.pyplot as plt
 # TODO: This is hard coded now, but we can retrieve in percent_track and pass along to this script
 FRAMES_PER_SEC = 30
 
+def calculate_control(time_series, percent_series_1, percent_series_2):
+    # figure out who has "control" of a match
+    prev_percent_1 = 0
+    prev_percent_2 = 0
+    prev_time = 0
+    controlled_time_1 = 0
+    controlled_time_2 = 0
+    # who was controlling the match at previous time step
+    prev_controller = 0
+    for time, percent_1, percent_2 in zip(time_series, percent_series_1, percent_series_2):
+        elapsed_time = time - prev_time
+        if percent_1 > prev_percent_1 and percent_2 == prev_percent_2:
+            # player 1 took more damage while player 2 did not
+            controlled_time_2 += elapsed_time
+            prev_controller = 2
+        elif percent_2 > prev_percent_2 and percent_1 == prev_percent_1:
+            # player 2 took more damage while player 1 did not
+            controlled_time_1 += elapsed_time
+            prev_controller = 1
+        elif percent_1 == prev_percent_1 and percent_2 == prev_percent_2:
+            # nothing's changed
+            if prev_controller == 1:
+                controlled_time_1 += elapsed_time
+            elif prev_controller == 2:
+                controlled_time_2 += elapsed_time
+        else:
+            # only other case is one of the percentages decreased, meaning someone was KO'ed.  let's assume
+            # control is reset in this situation, so neither player is controlling
+            prev_controller = 0
+        prev_percent_1 = percent_1
+        prev_percent_2 = percent_2
+        prev_time = time
+    return controlled_time_1, controlled_time_2
+
 def clean_up_data(percent_series):
     # clean up each percentage series.  probably shouldn't believe a 
     # jump of more than 30, or a drop in percentage (unless the drop is to 0)
@@ -12,6 +46,8 @@ def clean_up_data(percent_series):
     # use prev_valid_point for reference in case bad percentage found.  
     # for example, if 48,5,5, 54 appears, we'll turn the 5 into a 48.  
     # on the other hand, we use prev_point to find when a stock has ended
+    # also return the number of stocks which were STARTED by the player
+    # since we don't necessarily know how many ended just from the percent_series
     cleaned_data = []
     prev_valid_point = -1
     prev_point = -1
@@ -146,6 +182,8 @@ def main(argv = sys.argv):
         if winner == 2:
             wins_2 += 1
         num_stocks_won_by = abs(stocks_started_1 - stocks_started_2) + 1
+        control_time_1, control_time_2 = calculate_control(time_series, cleaned_series_1, cleaned_series_2)
+        print "in match " + str(idx) + ", player 1 controlled for " + str(control_time_1) + " and player 2 controlled for " + str(control_time_2)
         subplt = plt.subplot(num_matches, 1, idx+1)
         plt.plot(time_series, cleaned_series_1, 'b-')
         plt.plot(time_series, cleaned_series_2, 'r-')

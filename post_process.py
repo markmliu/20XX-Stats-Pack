@@ -2,7 +2,9 @@ import sys
 import os
 import matplotlib.pyplot as plt
 # post-process data file to split matches, clean data, and upload graphs for each match
+# TODO: This is hard coded now, but we can retrieve in percent_track and pass along to this script
 FRAMES_PER_SEC = 30
+
 def clean_up_data(percent_series):
     # clean up each percentage series.  probably shouldn't believe a 
     # jump of more than 30, or a drop in percentage (unless the drop is to 0)
@@ -30,9 +32,9 @@ def clean_up_data(percent_series):
     print "stocks started: " + str(stocks_started)
     return cleaned_data, stocks_started
 
-def main(argv = sys.argv):
-    data_file = argv[1]
-    f = open(data_file,'r')
+def split_data_by_matches(f):
+    # takes raw csv and splits by matches.  also adds interpolated points
+    # data is returned in matches and winners lists
     # match_flag indicates whether data point occurs during actual match or not
     prev_match_flag = False
     num_games = 0
@@ -41,8 +43,10 @@ def main(argv = sys.argv):
     # array of winners
     winners = []
     cur_match = []
+    # last percentage that appeared at location 1/2
     prev_loc_1 = -1
     prev_loc_2 = -1
+    # starting frame of the current match
     cur_starting_frame = 0
     # this flag should be set to true when one percentage is at -1 and the other is not
     # once this flag is set, i should be watching for both percentages to drop to -1. 
@@ -73,9 +77,8 @@ def main(argv = sys.argv):
             elif possible_match_ending_death_flag_2 == True:
                 print "Player 2 loses at frame: " + str(frames_elapsed)
                 winners.append(1)
-            # what if we didn't get info from that???
-            # i guess put 0 there for no meaning we don't know who won.
-            # can try to figure out later, when segmenting by stock
+            # if we didn't get info from this, put 0 there for now
+            # can try to figure out later when counting how many stocks were taken
             else:
                 winners.append(0)
             possible_match_ending_death_flag_1 = False
@@ -84,7 +87,7 @@ def main(argv = sys.argv):
         # in middle of the match
         elif cur_match_flag == True:
             relative_frames_elapsed = frames_elapsed - cur_starting_frame
-            # add interpolated points
+            # add interpolated point
             cur_match.append((relative_frames_elapsed - 1 ,prev_loc_1, prev_loc_2))
             # add real point
             cur_match.append((relative_frames_elapsed, loc_1, loc_2))
@@ -101,6 +104,12 @@ def main(argv = sys.argv):
     print "Number of games: " + str(num_games)
     # print "matches: " + str(matches)
     # video now separated into matches
+    return matches, winners
+
+def main(argv = sys.argv):
+    data_file = argv[1]
+    f = open(data_file,'r')
+    matches, winners = split_data_by_matches(f)
     # plot each match
     fig = plt.figure(1)
     num_matches = len(matches)
@@ -113,7 +122,7 @@ def main(argv = sys.argv):
         time_series = [float(x[0])/FRAMES_PER_SEC for x in match]
         if time_series[-1] > max_match_length:
             max_match_length = time_series[-1]
-            
+        
     for idx, match in enumerate(matches):
         # print "match: " + str(match)
         time_series = [float(x[0])/FRAMES_PER_SEC for x in match]

@@ -7,11 +7,17 @@ FRAMES_PER_SEC = 30
 
 def calculate_control(time_series, percent_series_1, percent_series_2):
     # figure out who has "control" of a match
+    res = {}
     prev_percent_1 = 0
     prev_percent_2 = 0
     prev_time = 0
     controlled_time_1 = 0
     controlled_time_2 = 0
+    # array of damage done by each combo for each player
+    combo_damage_1 = []
+    combo_damage_2 = []
+    cur_combo_damage_1 = 0
+    cur_combo_damage_2 = 0
     # who was controlling the match at previous time step
     prev_controller = 0
     for time, percent_1, percent_2 in zip(time_series, percent_series_1, percent_series_2):
@@ -20,10 +26,20 @@ def calculate_control(time_series, percent_series_1, percent_series_2):
             # player 1 took more damage while player 2 did not
             controlled_time_2 += elapsed_time
             prev_controller = 2
+            cur_combo_damage_2 += (percent_1 - prev_percent_1)
+            if (cur_combo_damage_1 != 0):
+                # combo has now ended
+                combo_damage_1.append(cur_combo_damage_1)
+                cur_combo_damage_1 = 0
         elif percent_2 > prev_percent_2 and percent_1 == prev_percent_1:
             # player 2 took more damage while player 1 did not
             controlled_time_1 += elapsed_time
             prev_controller = 1
+            cur_combo_damage_1 += (percent_2 - prev_percent_2)
+            if (cur_combo_damage_2 != 0):
+                # combo has ended
+                combo_damage_2.append(cur_combo_damage_1)
+                cur_combo_damage_2 = 0
         elif percent_1 == prev_percent_1 and percent_2 == prev_percent_2:
             # nothing's changed
             if prev_controller == 1:
@@ -34,10 +50,19 @@ def calculate_control(time_series, percent_series_1, percent_series_2):
             # only other case is one of the percentages decreased, meaning someone was KO'ed.  let's assume
             # control is reset in this situation, so neither player is controlling
             prev_controller = 0
+            # how to reward low percent gimps without overdoing it?
+            # nothing for now
         prev_percent_1 = percent_1
         prev_percent_2 = percent_2
         prev_time = time
-    return controlled_time_1, controlled_time_2
+    res['controlled_time_1'] = controlled_time_1
+    res['controlled_time_2'] = controlled_time_2
+    res['average_combo_length_1'] = sum(combo_damage_1)/float(len(combo_damage_1))
+    res['average_combo_length_2'] = sum(combo_damage_2)/float(len(combo_damage_2))
+    return res
+
+        
+        
 
 def clean_up_data(percent_series):
     # clean up each percentage series.  probably shouldn't believe a 
@@ -167,8 +192,8 @@ def main(argv = sys.argv):
         # print "percent_series_1: " + str(percent_series_1)
         cleaned_series_1, stocks_started_1 = clean_up_data(percent_series_1)
         cleaned_series_2, stocks_started_2 = clean_up_data(percent_series_2)
-        print "cleaned_series_1: " + str(cleaned_series_1)
-        print "cleaned_series_2: " + str(cleaned_series_2)
+        # print "cleaned_series_1: " + str(cleaned_series_1)
+        # print "cleaned_series_2: " + str(cleaned_series_2)
         winner = winners[idx]
         # if winner is unclear from reading percents, try to figure out from stock count
         if winner == 0:
@@ -182,8 +207,10 @@ def main(argv = sys.argv):
         if winner == 2:
             wins_2 += 1
         num_stocks_won_by = abs(stocks_started_1 - stocks_started_2) + 1
-        control_time_1, control_time_2 = calculate_control(time_series, cleaned_series_1, cleaned_series_2)
-        print "in match " + str(idx) + ", player 1 controlled for " + str(control_time_1) + " and player 2 controlled for " + str(control_time_2)
+        metrics = calculate_control(time_series, cleaned_series_1, cleaned_series_2)
+        print "in match " + str(idx) + ", player 1 controlled for " + str(metrics['controlled_time_1']) + " and player 2 controlled for " + str(metrics['controlled_time_2'])
+        print "player 1 average damage per opening: " + str(metrics['average_combo_length_1'])
+        print "player 2 average damage per opening: " + str(metrics['average_combo_length_2'])
         subplt = plt.subplot(num_matches, 1, idx+1)
         plt.plot(time_series, cleaned_series_1, 'b-')
         plt.plot(time_series, cleaned_series_2, 'r-')

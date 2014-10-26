@@ -109,19 +109,36 @@ def clean_up_data(percent_series):
     stocks_started = 0
     for point in percent_series:
         if point > prev_valid_point + 50:
-            cleaned_data.append(prev_valid_point)
+            # assume bad read here...
+            data_to_append = prev_valid_point
+            #cleaned_data.append(prev_valid_point)
         elif point < prev_valid_point and point != 0:
-            cleaned_data.append(prev_valid_point)
+            # luckily this should work since respawned opponent can't be hurt for first few seconds
+            data_to_append = prev_valid_point
+            # cleaned_data.append(prev_valid_point)
         else:
-            cleaned_data.append(point)
+            data_to_append = point
+            # cleaned_data.append(point)
             prev_valid_point = point
+        cleaned_data.append(data_to_append)
         # if previous point was -1 and current point is 0, is start of a new stock
         if prev_point == -1 and point == 0:
             stocks_started += 1
         prev_point = point
 
+
+    return cleaned_data
+
+def count_stocks_started(percent_series):
+    stocks_started = 0
+    prev_point = float("inf")
+    for point in percent_series:
+        if prev_point > 0 and point == 0:
+            stocks_started += 1
+        prev_point = point
     print "stocks started: " + str(stocks_started)
-    return cleaned_data, stocks_started
+    return stocks_started
+
 
 def split_data_by_matches(f):
     # takes raw csv and splits by matches.  also adds interpolated points
@@ -222,13 +239,15 @@ def main(argv = sys.argv):
         percent_series_1 = [x[1] for x in match]
         percent_series_2 = [x[2] for x in match]
         # print "percent_series_1: " + str(percent_series_1)
-        cleaned_series_1, stocks_started_1 = clean_up_data(percent_series_1)
-        cleaned_series_2, stocks_started_2 = clean_up_data(percent_series_2)
+        cleaned_series_1 = clean_up_data(percent_series_1)
+        cleaned_series_2 = clean_up_data(percent_series_2)
+        stocks_started_1 = count_stocks_started(cleaned_series_1)
+        stocks_started_2 = count_stocks_started(cleaned_series_2)
         # print "cleaned series for match" + str(idx) 
         #for time, percent_1, percent_2 in zip(time_series, cleaned_series_1, cleaned_series_2):
             #print "time: " + str(time) + " , percent_1: " + str(percent_1) + " , percent_2: " + str(percent_2)
-        # print "cleaned_series_1: " + str(cleaned_series_1)
-        # print "cleaned_series_2: " + str(cleaned_series_2)
+        print "cleaned_series_1: " + str(cleaned_series_1)
+        print "cleaned_series_2: " + str(cleaned_series_2)
         winner = winners[idx]
         # if winner is unclear from reading percents, try to figure out from stock count
         if winner == 0:

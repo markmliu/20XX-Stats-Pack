@@ -1,20 +1,35 @@
 import cv2
 import numpy as np
 
+def is_close_to(p1,p2):
+    if abs(p1[0]-p2[0])<5 and abs(p1[1]-p2[1])<5:
+        return True
+
+def is_valid_zero_location(x,y):
+    # valid locations: (110, 410), (248, 410), (386, 410), (524, 410)
+    valid_locations = [(110, 410), (248, 410), (386, 410), (524, 410)]
+    for valid_location in valid_locations:
+        if is_close_to((x,y), valid_location):
+            return True
+    return False
+
+
 def find_zeros(frame, zero, diff_method):
     #given frame and zero template, find top two matching locations using
     #cv2.matchTemplate
     diff = cv2.matchTemplate(frame, zero, eval(diff_method))
-    cv2.imshow('diff', diff)
-    cv2.waitKey(0)
+    # cv2.imshow('diff', diff)
+    # cv2.waitKey(0)
     # flatten out the diff array so we can sort it
     diff2 = np.reshape(diff, diff.shape[0]*diff.shape[1])
     # sort in reverse order
     sort = np.argsort(-diff2)
+    #print "diff2: " + str(diff2)
     print "sort: " + str(sort)
     ret = []
     (y1, x1) = (np.unravel_index(sort[0], diff.shape)) #best match
     ret.append((x1, y1))
+    print "point 1:", diff[y1][x1]
     y2 = y1
     x2 = x1
     idx = 1
@@ -22,7 +37,18 @@ def find_zeros(frame, zero, diff_method):
     while abs(y2 - y1) < 5 and abs(x2 - x1) < 5:
         (y2, x2) = (np.unravel_index(sort[idx], diff.shape)) #second best match
         idx += 1
+
+    print "point 2:", diff[y2][x2], " at idx ", idx
     ret.append((x2, y2))
+    y3 = y2
+    x3 = x2
+
+    # if top two matches are not that high, return false
+    if diff[y2][x2] < 0.6:
+        return None
+    if not is_valid_zero_location(x1,y1) or not is_valid_zero_location(x2,y2):
+        return None
+
     print "ret: " + str(ret)
     return ret
 

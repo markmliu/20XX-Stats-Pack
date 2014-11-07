@@ -12,6 +12,15 @@ DIFF_METHOD = 'cv2.TM_CCOEFF_NORMED'
 # include a buffer for candidate size, augment each side by 5 pixels to account for shakiness
 BUFFER_SIZE = 8
 
+def try_to_find_zeros(cap, zero, DIFF_METHOD):
+    ret, frame = cap.read()
+    locations_found = find_zeros(frame, zero, DIFF_METHOD)
+    while locations_found is None:
+        ret, frame = cap.read()
+        locations_found = find_zeros(frame, zero, DIFF_METHOD)
+    print "found locations:", locations_found
+    return locations_found
+
 def draw_around_percents(frame, extended_locations_found):
     for top_left in extended_locations_found:
         print "top left: " + str(top_left)
@@ -24,7 +33,7 @@ def compare_with_previous(img1, img2, locations_found):
     # compare img1 with img2 and see if anything changed significantly in locations_found
     # if diff falls below diff_threshold, then percentage has changed
     # don't necessarily need to include buffer for this
-    diff_threshold = 0.9
+    diff_threshold = 0.8
     for location in locations_found:
         # location[0] is horizontal, location[1] is vertical
         # but you need to index into image vertically then horizontally
@@ -53,7 +62,8 @@ def match_to_number(candidate, number_templates):
             max_val = cur_val
             max_idx = index
     # if there's something reasonably close, return that...
-    if max_val > 0.7:
+    # print "max_val: ", max_val
+    if max_val > 0.5:
         return max_idx
     # otherwise return -1
     return -1
@@ -90,18 +100,15 @@ def get_args(argv):
       sys.exit()
 
     file_name = sys.argv[1]
-
-    return file_name
+    stop_flag_file_name = "stop.txt"
+    return file_name, stop_flag_file_name
 
 def main(argv = sys.argv):
-    file_name = get_args(argv)
+    file_name, stop_flag_file_name = get_args(argv)
 
-    # is 1400, for falconDitto, 150 for mangoFalco
     # 1 is capture card on my laptop,
     cap = cv2.VideoCapture(1)
     fps = 30 #hardcode for now
-    # hardcode to find start of match now...should be able to find this programmatically
-    ret, frame = cap.read()
 
     # find where percentages are using template matching
     # load the zero template, use matchTemplate to find spots which are closest to it
@@ -109,64 +116,88 @@ def main(argv = sys.argv):
     zero = number_templates[0]
     # locations_found is the places where we think the zeros are
     # its an list of x,y pairs
-    locations_found = find_zeros(frame, zero, DIFF_METHOD)
-    extended_locations_found, _ = extend_locations(locations_found)
-    # draw a rectangle around each location, using hardcoded values of size of percents
-    draw_around_percents(frame, extended_locations_found)
+    # for live stream, with raw gameplay, locations should be p1:(110, 410), p2:(248, 410), (386, 410), (524, 410)
+    # so theyre 138 pixels apart
+    while (cap.isOpened()):
+        locations_found = try_to_find_zeros(cap, zero, DIFF_METHOD)
+        print "found locations!"
+        extended_locations_found, _ = extend_locations(locations_found)
+        # draw a rectangle around each location, using hardcoded values of size of percents
+        # draw_around_percents(frame, extended_locations_found)
 
-    _, previous_frame = cap.read()
-    prev_stability = False
-    frames_elapsed = 0
-    percent_series_1 = []
-    percent_series_2 = []
-    time_series = []
-    game_end = False
-    while(cap.isOpened() and not game_end):
-        ret ,frame = cap.read()
-        frames_elapsed += 1
-        if ret == True:
-            cv2.imshow('frame', frame)
-            # cv2.waitKey(0)
-            if not compare_with_previous(previous_frame, frame, locations_found):
-                # percentage will shake around, making it unstable
-                # wait until stable again to look for difference between it and previous one
-                cur_stability = False
+        _, previous_frame = cap.read()
+        prev_stability = False
+        frames_elapsed = 0
+        percent_series_1 = []
+        percent_series_2 = []
+        time_series = []
+        game_end = False
+        maybe_game_end = False
+        bad_frames_count = 0
+        while(not game_end):
+            ret ,frame = cap.read()
+            frames_elapsed += 1
+            if ret == True:
+                cv2.imshow('frame', frame)
+                # cv2.waitKey(0)
+
+                if not compare_with_previous(previous_frame, frame, locations_found):
+                    # percentage will shake around, making it unstable
+                    # wait until stable again to look for difference between it and previous one
+                    cur_stability = False
+                else:
+                    cur_stability = True
+                # if we've stabilized, check both percentages to see whats changed
+                if cur_stability and not prev_stability:
+                    best_guesses = []
+                    for idx, location in enumerate(extended_locations_found):
+                        candidate = frame[location[1]:location[1] + HEIGHT + (2 * BUFFER_SIZE), location[0]:location[0] + WIDTH + (2 * BUFFER_SIZE)]
+                        # cv2.imshow('candidate', candidate)
+                        # cv2.waitKey(0)
+                        best_guess = match_to_number(candidate, number_templates)
+                        # print "location: " + str(idx)
+                        # print "guessed percent: " + str(best_guess)
+                        best_guesses.append(best_guess)
+                    percent_1 = calculate_total_percent(best_guesses[0], best_guesses[1], best_guesses[2])
+                    percent_2 = calculate_total_percent(best_guesses[3], best_guesses[4], best_guesses[5])
+                    time_elapsed = float(frames_elapsed)/fps
+                    print "Location 1: " + str(percent_1) + " Location 2: " + str(percent_2) + " at frame " + str(frames_elapsed)
+                    if maybe_game_end:
+                        # watch new percentages
+                        if percent_1 == -1 and percent_2 == -1:
+                            bad_frames_count += 1
+                        else:
+                            bad_frames_count = 0
+                            maybe_game_end = False
+                        if bad_frames_count > 3:
+                            game_end = True
+                    if percent_1 == -1 and percent_2 == -1:
+                        maybe_game_end = True
+                    percent_series_1.append(percent_1)
+                    percent_series_2.append(percent_2)
+                    time_series.append(frames_elapsed)
+                    prev_percent_1 = percent_1
+                    prev_percent_2 = percent_2
+                    #cv2.waitKey(0)
+                if cv2.waitKey(25) & 0xFF == ord('q'):
+                    break
+                prev_stability = cur_stability
             else:
-                cur_stability = True
-            # if we've stabilized, check both percentages to see whats changed
-            if cur_stability and not prev_stability:
-                best_guesses = []
-                for idx, location in enumerate(extended_locations_found):
-                    candidate = frame[location[1]:location[1] + HEIGHT + (2 * BUFFER_SIZE), location[0]:location[0] + WIDTH + (2 * BUFFER_SIZE)]
-                    # cv2.imshow('candidate', candidate)
-                    # cv2.waitKey(0)
-                    best_guess = match_to_number(candidate, number_templates)
-                    # print "location: " + str(idx)
-                    # print "guessed percent: " + str(best_guess)
-                    best_guesses.append(best_guess)
-                percent_1 = calculate_total_percent(best_guesses[0], best_guesses[1], best_guesses[2])
-                percent_2 = calculate_total_percent(best_guesses[3], best_guesses[4], best_guesses[5])
-                time_elapsed = float(frames_elapsed)/fps
-                print "Location 1: " + str(percent_1) + " Location 2: " + str(percent_2) + " at frame " + str(frames_elapsed)
-                if percent_1 == -1 and percent_2 == -1:
-                    game_end = True
-                percent_series_1.append(percent_1)
-                percent_series_2.append(percent_2)
-                time_series.append(frames_elapsed)
-                #cv2.waitKey(0)
-            if cv2.waitKey(25) & 0xFF == ord('q'):
                 break
-            prev_stability = cur_stability
-        else:
-            break
-        previous_frame = frame
-    if not os.path.exists('data'):
-        os.makedirs('data')
-    file_name_stripped = file_name.split('.')[0]
-    f = open('data/' + file_name_stripped + '.csv','w')
-    for idx, time_stamp in enumerate(time_series):
-        f.write(str(time_stamp) + ', ' + str(percent_series_1[idx]) + ', ' + str(percent_series_2[idx]) + '\n')
-    f.close()
+            previous_frame = frame
+
+        print "match ended!"
+        if not os.path.exists('data'):
+            os.makedirs('data')
+        file_name_stripped = file_name.split('.')[0]
+        f = open('data/' + file_name_stripped + '.csv','w')
+        for idx, time_stamp in enumerate(time_series):
+            f.write(str(time_stamp) + ', ' + str(percent_series_1[idx]) + ', ' + str(percent_series_2[idx]) + '\n')
+        f.close()
+        # open a file which marks that game has ended
+        f = open(stop_flag_file_name, 'w+')
+        f.write('test')
+        f.close()
 
     cv2.destroyAllWindows()
     cap.release()

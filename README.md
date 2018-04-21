@@ -9,4 +9,4 @@ Stats package for SSBM
 ![Alt text](http://i60.tinypic.com/1j1bav.jpg "Falco Fox")
 
 ## In action
-![Demo 20xx Stats Pack](https://gph.is/2JZ2cnL)
+![Demo 20xx Stats Pack](https://media.giphy.com/media/iqsUMciFbjR69oVy2R/giphy.gif)

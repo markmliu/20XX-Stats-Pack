@@ -5,21 +5,12 @@ def is_close_to(p1,p2):
     if abs(p1[0]-p2[0])<5 and abs(p1[1]-p2[1])<5:
         return True
 
-def is_valid_zero_location(x,y):
-    # valid locations: (110, 410), (248, 410), (386, 410), (524, 410)
-    valid_locations = [(110, 410), (248, 410), (386, 410), (524, 410)]
-    for valid_location in valid_locations:
-        if is_close_to((x,y), valid_location):
-            return True
-    return False
-
-
 def find_zeros(frame, zero, diff_method):
     #given frame and zero template, find top two matching locations using
     #cv2.matchTemplate
     diff = cv2.matchTemplate(frame, zero, eval(diff_method))
-    # cv2.imshow('diff', diff)
-    # cv2.waitKey(0)
+    cv2.imshow('diff', diff)
+    cv2.waitKey(0)
     # flatten out the diff array so we can sort it
     diff2 = np.reshape(diff, diff.shape[0]*diff.shape[1])
     # sort in reverse order
@@ -46,8 +37,8 @@ def find_zeros(frame, zero, diff_method):
     # if top two matches are not that high, return false
     if diff[y2][x2] < 0.6:
         return None
-    if not is_valid_zero_location(x1,y1) or not is_valid_zero_location(x2,y2):
-        return None
+    print x1,y1
+    print x2,y2
 
     print "ret: " + str(ret)
     return ret
@@ -75,4 +66,3 @@ def read_and_preprocess_frame(cap, source):
             frame = frame[0:719, 0:959]
             frame = cv2.resize(frame, (640, 480))
     return ret, frame
-

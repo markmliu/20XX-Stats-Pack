@@ -1,6 +1,5 @@
 import numpy as np
 import cv2
-import cv2.cv as cv
 import sys
 import os
 from smash_util import *
@@ -11,6 +10,8 @@ DIFF_METHOD = 'cv2.TM_CCOEFF_NORMED'
 # include a buffer for candidate size, augment each side by 5 pixels to account
 # for shakiness
 BUFFER_SIZE = 8
+# hardcoded for now
+FPS = 30
 
 def draw_around_percents(frame, extended_locations_found):
     for top_left in extended_locations_found:
@@ -106,9 +107,6 @@ def main(argv = sys.argv):
 
     cap = cv2.VideoCapture(file_name)
 
-    fps = cv.GetCaptureProperty(cv.CaptureFromFile(file_name),
-                                cv.CV_CAP_PROP_FPS)
-    print "Frames Per Second: " + str(fps)
     # hardcode to find start of match now...should be able to find this
     # programmatically
     for i in range(1, frames_to_start):
@@ -170,7 +168,7 @@ def main(argv = sys.argv):
                     best_guesses[0], best_guesses[1], best_guesses[2])
                 percent_2 = calculate_total_percent(
                     best_guesses[3], best_guesses[4], best_guesses[5])
-                time_elapsed = float(frames_elapsed)/fps
+                time_elapsed = float(frames_elapsed)/FPS
                 print "Location 1: " + str(percent_1) + " Location 2: " + \
                     str(percent_2) + " at frame " + str(frames_elapsed)
                 percent_series_1.append(percent_1)

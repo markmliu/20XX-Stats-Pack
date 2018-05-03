@@ -13,7 +13,7 @@ A tool to read percentages from video gameplay of Super Smash Bros. Melee and pr
 ![Alt text](http://i57.tinypic.com/33kru4o.jpg "Falcon Ditto")
 ![Alt text](http://i60.tinypic.com/1j1bav.jpg "Falco Fox")
 
-## (Work in progress)
+## Character tracking (Work in progress)
 
 I'm playing around with tracking characters on the screen. No good so far.
 ![Demo character tracking](https://media.giphy.com/media/TFizPebFny5lqTiLft/giphy.gif)

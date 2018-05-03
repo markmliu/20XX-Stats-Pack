@@ -6,7 +6,7 @@
 A tool to read percentages from video gameplay of Super Smash Bros. Melee and produce graphs.
 
 ## In action
-[![Demo 20xx Stats Pack](https://media.giphy.com/media/iqsUMciFbjR69oVy2R/giphy.gif)]
+![Demo 20xx Stats Pack](https://media.giphy.com/media/iqsUMciFbjR69oVy2R/giphy.gif)
 
 ## Graph output
 
@@ -16,4 +16,4 @@ A tool to read percentages from video gameplay of Super Smash Bros. Melee and pr
 ## (Work in progress)
 
 I'm playing around with tracking characters on the screen. No good so far.
-[![Demo character tracking](https://media.giphy.com/media/TFizPebFny5lqTiLft/giphy.gif)]
+![Demo character tracking](https://media.giphy.com/media/TFizPebFny5lqTiLft/giphy.gif)

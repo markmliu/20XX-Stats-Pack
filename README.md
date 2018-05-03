@@ -16,4 +16,4 @@ A tool to read percentages from video gameplay of Super Smash Bros. Melee and pr
 ## (Work in progress)
 
 I'm playing around with tracking characters on the screen. No good so far.
-[![Demo character tracking](https://gfycat.com/BeautifulDecentChickadee)]
+[![Demo character tracking](https://media.giphy.com/media/TFizPebFny5lqTiLft/giphy.gif)]
